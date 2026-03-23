@@ -1,0 +1,53 @@
+name: Build and Release
+
+# Déclencheur : Création d'un tag commençant par 'v' (ex: v1.0.0)
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch: # Permet de lancer manuellement depuis l'interface GitHub
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12' 
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Build Executable with PyInstaller
+        # Lancer la construction de l'exe
+        run: pyinstaller pyconverter.spec
+
+      - name: Install Inno Setup
+        # Installation silencieuse de Inno Setup via choco
+        run: choco install innosetup
+
+      - name: Build Installer with Inno Setup
+        # Compilation du script .iss pour créer l'installateur
+        run: |
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" pyconverter_installer.iss
+
+      - name: Create Release and Upload Assets
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            dist/pyconverter.exe
+            Output/PyConverter_Installer_*.exe
+          token: ${{ secrets.GITHUB_TOKEN }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
