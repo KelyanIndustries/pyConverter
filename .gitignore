@@ -4,5 +4,4 @@ dist/
 Output/
 build.log
 setup.reg
-setup.bat
 src/__pycache__/
